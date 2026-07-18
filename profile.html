@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Profile | PlayMate</title>
+  <meta name="description" content="Manage your PlayMate profile, view your bookings and venues.">
+  <link rel="stylesheet" href="styles/main.css">
+  <style>
+    .profile-page{padding-top:100px;padding-bottom:80px}
+    .profile-hero{background:linear-gradient(135deg,rgba(0,255,136,.06),rgba(124,58,237,.06));border:1px solid var(--border);border-radius:var(--radius-xl);padding:40px;display:flex;align-items:center;gap:32px;margin-bottom:36px;flex-wrap:wrap}
+    .profile-photo-big{width:120px;height:120px;border-radius:50%;border:4px solid var(--primary);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:48px;font-weight:700;color:var(--primary);background:rgba(0,255,136,.1);flex-shrink:0;cursor:pointer;position:relative;transition:var(--transition);box-shadow:0 0 30px var(--primary-glow)}
+    .profile-photo-big:hover::after{content:'📷 Change';position:absolute;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:white;border-radius:50%}
+    .profile-photo-big img{width:100%;height:100%;object-fit:cover}
+    .profile-info{flex:1}
+    .profile-layout{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+    @media(max-width:768px){.profile-layout{grid-template-columns:1fr}.profile-hero{flex-direction:column;text-align:center}}
+    .profile-section{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px}
+    .my-slot-item{padding:16px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius-md);margin-bottom:12px;cursor:pointer;transition:var(--transition-fast)}
+    .my-slot-item:hover{border-color:rgba(0,255,136,.2)}
+    .my-venue-item{padding:16px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius-md);margin-bottom:12px;cursor:pointer;transition:var(--transition-fast);display:flex;gap:14px;align-items:center}
+    .my-venue-item:hover{border-color:rgba(0,255,136,.2)}
+    .my-venue-photo{width:64px;height:64px;border-radius:var(--radius-sm);object-fit:cover;flex-shrink:0;background:var(--bg-card)}
+    .stat-row{display:flex;gap:16px;margin-bottom:24px}
+    .stat-mini{flex:1;background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius-md);padding:16px;text-align:center}
+    .stat-mini-num{font-size:28px;font-weight:900;color:var(--primary)}
+    .stat-mini-label{font-size:12px;color:var(--text-muted)}
+  </style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-orbs"><div class="bg-orb bg-orb-2" style="opacity:.06"></div></div>
+
+<nav class="navbar scrolled">
+  <div class="container navbar-inner">
+    <a href="index.html" class="nav-logo">
+      <img src="assets/logo.svg" alt="PlayMate" style="height:36px;width:auto;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <div style="display:none;align-items:center;gap:8px;"><div class="nav-logo-icon">PM</div><span class="nav-logo-text">Play<span>Mate</span></span></div>
+    </a>
+    <div class="nav-links">
+      <a href="index.html" class="nav-link">Home</a>
+      <a href="venues.html" class="nav-link">Browse Venues</a>
+      <a href="add-venue.html" class="nav-link">Add Venue</a>
+      <a href="profile.html" class="nav-link active">My Profile</a>
+    </div>
+    <div class="nav-actions" id="nav-actions"></div>
+  </div>
+</nav>
+
+<!-- PHOTO MODAL -->
+<div class="modal-overlay" id="photo-modal" style="display:none;">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-header"><h2 class="modal-title">📷 Update Profile Photo</h2><button class="modal-close" onclick="UI.closeModal('photo-modal')">×</button></div>
+    <div class="photo-upload-area"><input type="file" id="profile-photo-input" accept="image/*" onchange="handleProfilePhoto(this)"><div class="upload-icon">📸</div><div class="upload-text"><strong>Click to choose</strong> a new photo</div></div>
+    <div id="photo-preview-container" style="margin-top:12px;text-align:center;"></div>
+    <div style="display:flex;gap:12px;margin-top:20px;"><button class="btn btn-ghost" style="flex:1;" onclick="UI.closeModal('photo-modal')">Cancel</button><button class="btn btn-primary" style="flex:2;" onclick="saveProfilePhoto()" id="save-photo-btn" disabled>Save Photo</button></div>
+  </div>
+</div>
+
+<!-- EDIT PROFILE MODAL -->
+<div class="modal-overlay" id="edit-modal" style="display:none;">
+  <div class="modal">
+    <div class="modal-header"><h2 class="modal-title">✏️ Edit Profile</h2><button class="modal-close" onclick="UI.closeModal('edit-modal')">×</button></div>
+    <form onsubmit="saveProfile(event)">
+      <div class="form-group"><label class="form-label">Full Name *</label><input type="text" class="form-input" id="edit-name" required></div>
+      <div class="form-group"><label class="form-label">Phone Number *</label><input type="tel" class="form-input" id="edit-phone" required pattern="[0-9]{10}" maxlength="10"></div>
+      <div class="form-group"><label class="form-label">Email (cannot change)</label><input type="email" class="form-input" id="edit-email" disabled style="opacity:.5;"></div>
+      <div style="display:flex;gap:12px;margin-top:16px;"><button type="button" class="btn btn-ghost" style="flex:1;" onclick="UI.closeModal('edit-modal')">Cancel</button><button type="submit" class="btn btn-primary" style="flex:2;">Save Changes</button></div>
+    </form>
+  </div>
+</div>
+
+<div class="page-wrapper">
+  <div class="profile-page" id="profile-content">
+    <div style="text-align:center;padding:80px;color:var(--text-muted);">Loading profile…</div>
+  </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+<script src="js/api.js"></script>
+<script src="js/ui.js"></script>
+<script>
+  let newPhotoBase64 = null;
+  let currentUser = null;
+
+  async function init() {
+    if (!API.isLoggedIn()) { window.location.href = 'login.html?redirect=profile.html'; return; }
+    try {
+      currentUser = await API.getMe();
+      const [mySlots, myVenues] = await Promise.all([API.getMySlots(), API.getMyVenues()]);
+      renderProfile(currentUser, mySlots, myVenues);
+    } catch(e) {
+      document.getElementById('profile-content').innerHTML = `<div class="container"><div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-title">Cannot load profile</div><p class="empty-state-desc">Make sure the Flask server is running on port 5000.</p></div></div>`;
+    }
+  }
+
+  function renderProfile(user, mySlots, myVenues) {
+    const joinedCount     = mySlots.filter(s=>s.status!=='cancelled').length;
+    const confirmedCount  = mySlots.filter(s=>s.status==='locked').length;
+
+    document.getElementById('profile-content').innerHTML = `
+    <div class="container">
+      <div class="section-tag">👤 Profile</div>
+      <h1 class="section-title" style="margin-bottom:32px;">My <span>Profile</span></h1>
+
+      <div class="profile-hero">
+        <div class="profile-photo-big" onclick="UI.openModal('photo-modal')" title="Change photo">
+          ${user.profile_photo ? `<img src="${user.profile_photo}" alt="${user.name}">` : user.name.charAt(0).toUpperCase()}
+        </div>
+        <div class="profile-info">
+          <div style="font-size:32px;font-weight:900;margin-bottom:6px;">${user.name}</div>
+          <div style="font-size:15px;color:var(--text-muted);margin-bottom:4px;">📧 ${user.email}</div>
+          <div style="font-size:15px;color:var(--text-muted);margin-bottom:16px;">📞 ${user.phone}</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <span style="padding:6px 14px;border-radius:100px;font-size:12px;font-weight:700;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.2);color:var(--primary);">🏅 PlayMate Member</span>
+            ${myVenues.length>0?`<span style="padding:6px 14px;border-radius:100px;font-size:12px;font-weight:700;background:rgba(255,107,53,.1);border:1px solid rgba(255,107,53,.2);color:var(--secondary);">🏟️ Venue Owner</span>`:''}
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <button class="btn btn-secondary" onclick="openEditModal()">✏️ Edit Profile</button>
+          <a href="add-venue.html" class="btn btn-primary">+ Add Venue</a>
+          <button class="btn btn-danger btn-sm" onclick="handleLogout()">Sign Out</button>
+        </div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-mini"><div class="stat-mini-num">${joinedCount}</div><div class="stat-mini-label">Slots Joined</div></div>
+        <div class="stat-mini"><div class="stat-mini-num">${myVenues.length}</div><div class="stat-mini-label">Venues Listed</div></div>
+        <div class="stat-mini"><div class="stat-mini-num">${confirmedCount}</div><div class="stat-mini-label">Confirmed Bookings</div></div>
+      </div>
+
+      <div class="profile-layout">
+        <!-- MY SLOTS -->
+        <div class="profile-section">
+          <div style="font-size:16px;font-weight:800;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;">
+            <span>📅 My Joined Slots</span><span style="font-size:13px;color:var(--text-muted);font-weight:400;">${mySlots.length} total</span>
+          </div>
+          ${mySlots.length===0 ? `<div class="empty-state" style="padding:32px 0;"><div class="empty-state-icon" style="font-size:40px;">📅</div><div class="empty-state-title">No slots yet</div><p class="empty-state-desc">Browse venues and join a slot!</p><a href="venues.html" class="btn btn-primary btn-sm">Browse Venues</a></div>`
+          : mySlots.map(slot => `
+            <div class="my-slot-item" onclick="window.location.href='venue-detail.html?id=${slot.venueId}'">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+                <div style="font-weight:700;font-size:15px;">${UI.sportEmoji(slot.sportType||'Other')} ${slot.venueName||'Venue'}</div>
+                ${UI.slotStatusBadge(slot)}
+              </div>
+              <div style="font-size:13px;color:var(--text-muted);margin-top:4px;">⏰ ${UI.formatTime(slot.startTime)} – ${UI.formatTime(slot.endTime)} | 📅 ${UI.formatDate(slot.date)}</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:3px;">📍 ${slot.venueLocation||'N/A'} | 👥 ${slot.memberCount}/${slot.maxMembers} players</div>
+            </div>`).join('')}
+        </div>
+
+        <!-- MY VENUES -->
+        <div class="profile-section">
+          <div style="font-size:16px;font-weight:800;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;">
+            <span>🏟️ My Venues</span><a href="add-venue.html" class="btn btn-primary btn-sm">+ Add</a>
+          </div>
+          ${myVenues.length===0 ? `<div class="empty-state" style="padding:32px 0;"><div class="empty-state-icon" style="font-size:40px;">🏟️</div><div class="empty-state-title">No venues yet</div><p class="empty-state-desc">Own a sports facility? List it!</p><a href="add-venue.html" class="btn btn-primary btn-sm">Add Venue</a></div>`
+          : myVenues.map(venue => `
+            <div class="my-venue-item" onclick="window.location.href='venue-detail.html?id=${venue.id}'">
+              <img class="my-venue-photo" src="${venue.photos?.[0]||'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=200&q=60'}" alt="${venue.name}" loading="lazy">
+              <div style="flex:1;">
+                <div style="font-weight:700;font-size:15px;margin-bottom:3px;">${venue.name}</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">📍 ${venue.location}</div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                  <span class="badge badge-sport" style="font-size:10px;">${UI.sportEmoji(venue.sportType)} ${venue.sportType}</span>
+                  <span style="font-size:11px;color:var(--primary);">🟢 ${venue.openSlots||0} open</span>
+                </div>
+              </div>
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+
+    // Prefill edit modal
+    document.getElementById('edit-name').value  = user.name;
+    document.getElementById('edit-phone').value = user.phone;
+    document.getElementById('edit-email').value = user.email;
+  }
+
+  function openEditModal() {
+    document.getElementById('edit-name').value  = currentUser.name;
+    document.getElementById('edit-phone').value = currentUser.phone;
+    document.getElementById('edit-email').value = currentUser.email;
+    UI.openModal('edit-modal');
+  }
+
+  async function saveProfile(e) {
+    e.preventDefault();
+    const phone = document.getElementById('edit-phone').value.trim();
+    if (phone.length!==10||!/^\d+$/.test(phone)) { UI.toast('Valid 10-digit phone required','error'); return; }
+    try {
+      currentUser = await API.updateProfile({ name: document.getElementById('edit-name').value.trim(), phone });
+      UI.closeModal('edit-modal');
+      UI.toast('✅ Profile updated!','success');
+      UI.updateNavbar();
+      const [mySlots, myVenues] = await Promise.all([API.getMySlots(), API.getMyVenues()]);
+      renderProfile(currentUser, mySlots, myVenues);
+    } catch(e) { UI.toast(e.message,'error'); }
+  }
+
+  async function handleProfilePhoto(input) {
+    const file = input.files[0]; if (!file) return;
+    newPhotoBase64 = await UI.fileToBase64(file);
+    document.getElementById('photo-preview-container').innerHTML = `<img src="${newPhotoBase64}" style="width:100px;height:100px;border-radius:50%;object-fit:cover;border:3px solid var(--primary);">`;
+    document.getElementById('save-photo-btn').disabled = false;
+  }
+
+  async function saveProfilePhoto() {
+    if (!newPhotoBase64) return;
+    try {
+      currentUser = await API.updateProfile({ profile_photo: newPhotoBase64 });
+      API.setCachedUser(currentUser);
+      UI.closeModal('photo-modal');
+      UI.toast('✅ Photo updated!','success');
+      newPhotoBase64 = null;
+      UI.updateNavbar();
+      const [mySlots, myVenues] = await Promise.all([API.getMySlots(), API.getMyVenues()]);
+      renderProfile(currentUser, mySlots, myVenues);
+    } catch(e) { UI.toast(e.message,'error'); }
+  }
+
+  function handleLogout() {
+    if (!confirm('Sign out of PlayMate?')) return;
+    API.logout();
+    UI.toast('Signed out. See you next game! 👋','info');
+    setTimeout(()=>window.location.href='index.html',800);
+  }
+
+  init();
+</script>
+</body>
+</html>

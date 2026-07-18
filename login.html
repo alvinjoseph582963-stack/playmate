@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In / Register | PlayMate – Find Your Game Partner</title>
+  <meta name="description" content="Join PlayMate — India's sports partner platform. Sign up free and start playing sports with strangers near you.">
+  <link rel="stylesheet" href="styles/main.css">
+  <style>
+    .auth-page{min-height:100vh;display:grid;grid-template-columns:1fr 1fr}
+    @media(max-width:768px){.auth-page{grid-template-columns:1fr}.auth-left{display:none}}
+    .auth-left{background:linear-gradient(135deg,rgba(0,255,136,.08),rgba(124,58,237,.08));border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 48px;position:relative;overflow:hidden}
+    .auth-left-content{position:relative;z-index:2;text-align:center}
+    .auth-left-icon{font-size:80px;margin-bottom:24px;animation:floatIcon 4s ease-in-out infinite}
+    @keyframes floatIcon{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+    .auth-right{display:flex;align-items:center;justify-content:center;padding:48px 40px}
+    .auth-form-wrap{width:100%;max-width:420px}
+    .tabs-auth{display:flex;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-md);padding:4px;margin-bottom:28px}
+    .tab-auth-btn{flex:1;padding:10px;border-radius:var(--radius-sm);font-size:14px;font-weight:700;color:var(--text-secondary);background:transparent;border:none;cursor:pointer;transition:var(--transition-fast)}
+    .tab-auth-btn.active{background:var(--primary);color:var(--bg-primary);box-shadow:0 4px 12px var(--primary-glow)}
+    .auth-panel{display:none}.auth-panel.active{display:block}
+    .auth-divider{display:flex;align-items:center;gap:12px;margin:20px 0;color:var(--text-muted);font-size:12px}
+    .auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+    .profile-photo-upload{display:flex;align-items:center;gap:16px;padding:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-md);margin-bottom:20px}
+    .profile-photo-preview{width:64px;height:64px;border-radius:50%;border:2px solid var(--primary);overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:24px;background:rgba(0,255,136,.1);color:var(--primary)}
+    .profile-photo-preview img{width:100%;height:100%;object-fit:cover}
+  </style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-orbs"><div class="bg-orb bg-orb-1" style="opacity:.08"></div><div class="bg-orb bg-orb-2" style="opacity:.06"></div></div>
+
+<div class="auth-page">
+  <!-- LEFT PANEL -->
+  <div class="auth-left">
+    <div class="auth-left-content">
+      <div style="margin-bottom:32px;"><img src="assets/logo.svg" alt="PlayMate" style="height:60px;width:auto;filter:brightness(0) invert(1);opacity:.9;" onerror="this.outerHTML='<div style=&quot;font-size:32px;font-weight:900;color:var(--primary)&quot;>PlayMate</div>'"></div>
+      <div class="auth-left-icon">🏆</div>
+      <h1 style="font-size:36px;font-weight:900;margin-bottom:16px;line-height:1.2;">Play With <span style="background:linear-gradient(135deg,var(--primary),#64ffda);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">Strangers</span></h1>
+      <p style="font-size:16px;color:var(--text-secondary);line-height:1.7;max-width:340px;">Join India's most exciting sports community. Find players, book venues, and play your favourite sport — even when your friends aren't available.</p>
+      <div style="display:flex;gap:16px;margin-top:36px;justify-content:center;flex-wrap:wrap;">
+        <span style="padding:10px 18px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:100px;font-size:14px;font-weight:600;">⚽ Football</span>
+        <span style="padding:10px 18px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:100px;font-size:14px;font-weight:600;">🏏 Cricket</span>
+        <span style="padding:10px 18px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:100px;font-size:14px;font-weight:600;">🏀 Basketball</span>
+        <span style="padding:10px 18px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:100px;font-size:14px;font-weight:600;">🏸 Badminton</span>
+      </div>
+      <div style="margin-top:40px;display:flex;gap:24px;justify-content:center;">
+        <div style="text-align:center;"><div style="font-size:28px;font-weight:900;color:var(--primary);">500+</div><div style="font-size:12px;color:var(--text-muted);">Active Players</div></div>
+        <div style="text-align:center;"><div style="font-size:28px;font-weight:900;color:var(--primary);">100+</div><div style="font-size:12px;color:var(--text-muted);">Venues Listed</div></div>
+        <div style="text-align:center;"><div style="font-size:28px;font-weight:900;color:var(--primary);">9+</div><div style="font-size:12px;color:var(--text-muted);">Sports</div></div>
+      </div>
+    </div>
+    <div class="floating-icons">
+      <div class="floating-icon" style="top:10%;left:5%;font-size:30px;">⚽</div>
+      <div class="floating-icon" style="bottom:10%;right:5%;font-size:30px;animation-delay:2s;">🏀</div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="auth-right">
+    <div class="auth-form-wrap">
+      <a href="index.html" style="display:inline-block;margin-bottom:36px;">
+        <img src="assets/logo.svg" alt="PlayMate" style="height:44px;width:auto;" onerror="this.outerHTML='<div style=&quot;display:flex;align-items:center;gap:8px&quot;><div class=&quot;nav-logo-icon&quot;>PM</div><span style=&quot;font-size:22px;font-weight:900;color:var(--primary)&quot;>PlayMate</span></div>'">
+      </a>
+
+      <div class="tabs-auth">
+        <button class="tab-auth-btn active" id="tab-login" onclick="switchTab('login')">Sign In</button>
+        <button class="tab-auth-btn" id="tab-register" onclick="switchTab('register')">Create Account</button>
+      </div>
+
+      <!-- LOGIN -->
+      <div class="auth-panel active" id="panel-login">
+        <h2 style="font-size:22px;font-weight:800;margin-bottom:6px;">Welcome back! 👋</h2>
+        <p style="font-size:14px;color:var(--text-muted);margin-bottom:24px;">Sign in to join slots and play sports!</p>
+        <form id="login-form" onsubmit="handleLogin(event)">
+          <div class="form-group"><label class="form-label">Email Address</label><input type="email" class="form-input" id="login-email" placeholder="you@example.com" required></div>
+          <div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" id="login-password" placeholder="Your password" required></div>
+          <button type="submit" class="btn btn-primary" style="width:100%;margin-top:8px;" id="login-btn">Sign In →</button>
+        </form>
+        <div class="auth-divider">Demo accounts</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <button class="btn btn-ghost btn-sm" onclick="demoLogin('arjun@demo.com')">⚽ Arjun (Player)</button>
+          <button class="btn btn-ghost btn-sm" onclick="demoLogin('priya@demo.com')">🏸 Priya (Owner)</button>
+        </div>
+        <p style="text-align:center;margin-top:20px;font-size:13px;color:var(--text-muted);">No account? <span style="color:var(--primary);cursor:pointer;font-weight:600;" onclick="switchTab('register')">Create one free →</span></p>
+      </div>
+
+      <!-- REGISTER -->
+      <div class="auth-panel" id="panel-register">
+        <h2 style="font-size:22px;font-weight:800;margin-bottom:6px;">Join PlayMate 🚀</h2>
+        <p style="font-size:14px;color:var(--text-muted);margin-bottom:24px;">Free forever. Find sports partners instantly.</p>
+        <form id="register-form" onsubmit="handleRegister(event)">
+          <div class="profile-photo-upload">
+            <div class="profile-photo-preview" id="reg-photo-preview">👤</div>
+            <div><div style="font-size:14px;font-weight:600;margin-bottom:4px;">Profile Photo</div><label style="color:var(--primary);cursor:pointer;font-size:13px;font-weight:600;text-decoration:underline;" for="reg-photo-input">Upload photo</label><input type="file" id="reg-photo-input" accept="image/*" style="display:none;" onchange="handleRegPhoto(this)"><div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Helps teammates recognise you</div></div>
+          </div>
+          <div class="form-group"><label class="form-label">Full Name *</label><input type="text" class="form-input" id="reg-name" placeholder="e.g. Arjun Mehta" required></div>
+          <div class="form-group"><label class="form-label">Email Address *</label><input type="email" class="form-input" id="reg-email" placeholder="you@example.com" required></div>
+          <div class="form-group"><label class="form-label">Phone Number *</label><input type="tel" class="form-input" id="reg-phone" placeholder="10-digit mobile number" required pattern="[0-9]{10}" maxlength="10"><div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Shared with venue owners after slot confirmation</div></div>
+          <div class="form-group"><label class="form-label">Password *</label><input type="password" class="form-input" id="reg-password" placeholder="Min 6 characters" required minlength="6"></div>
+          <button type="submit" class="btn btn-primary" style="width:100%;margin-top:8px;" id="reg-btn">Create Account 🎉</button>
+        </form>
+        <p style="text-align:center;margin-top:20px;font-size:13px;color:var(--text-muted);">Already have an account? <span style="color:var(--primary);cursor:pointer;font-weight:600;" onclick="switchTab('login')">Sign In →</span></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+<script src="js/api.js"></script>
+<script src="js/ui.js"></script>
+<script>
+  let regPhotoBase64 = null;
+
+  function switchTab(tab) {
+    document.getElementById('panel-login').classList.toggle('active', tab==='login');
+    document.getElementById('panel-register').classList.toggle('active', tab==='register');
+    document.getElementById('tab-login').classList.toggle('active', tab==='login');
+    document.getElementById('tab-register').classList.toggle('active', tab==='register');
+  }
+  if (window.location.hash === '#register') switchTab('register');
+
+  async function handleRegPhoto(input) {
+    const file = input.files[0];
+    if (!file) return;
+    regPhotoBase64 = await UI.fileToBase64(file);
+    document.getElementById('reg-photo-preview').innerHTML = `<img src="${regPhotoBase64}" alt="preview">`;
+  }
+
+  async function handleLogin(e) {
+    e.preventDefault();
+    const btn = document.getElementById('login-btn');
+    btn.textContent = 'Signing in…'; btn.disabled = true;
+    try {
+      await API.login(
+        document.getElementById('login-email').value.trim(),
+        document.getElementById('login-password').value
+      );
+      UI.toast('Welcome back! 🎉', 'success');
+      const redirect = new URLSearchParams(window.location.search).get('redirect');
+      setTimeout(() => window.location.href = redirect || 'index.html', 800);
+    } catch(err) {
+      UI.toast(err.message, 'error');
+      btn.textContent = 'Sign In →'; btn.disabled = false;
+    }
+  }
+
+  async function handleRegister(e) {
+    e.preventDefault();
+    const phone = document.getElementById('reg-phone').value.trim();
+    if (phone.length !== 10 || !/^\d+$/.test(phone)) { UI.toast('Please enter a valid 10-digit phone number', 'error'); return; }
+    const btn = document.getElementById('reg-btn');
+    btn.textContent = 'Creating account…'; btn.disabled = true;
+    try {
+      await API.register(
+        document.getElementById('reg-name').value.trim(),
+        document.getElementById('reg-email').value.trim(),
+        phone,
+        document.getElementById('reg-password').value,
+        regPhotoBase64
+      );
+      UI.toast('🎉 Welcome to PlayMate!', 'success');
+      const redirect = new URLSearchParams(window.location.search).get('redirect');
+      setTimeout(() => window.location.href = redirect || 'index.html', 1000);
+    } catch(err) {
+      UI.toast(err.message, 'error');
+      btn.textContent = 'Create Account 🎉'; btn.disabled = false;
+    }
+  }
+
+  function demoLogin(email) {
+    document.getElementById('login-email').value = email;
+    document.getElementById('login-password').value = 'demo123';
+    UI.toast('Demo credentials filled — click Sign In!', 'info');
+    switchTab('login');
+  }
+
+  // Already logged in
+  if (API.isLoggedIn()) {
+    const redirect = new URLSearchParams(window.location.search).get('redirect');
+    window.location.href = redirect || 'index.html';
+  }
+</script>
+</body>
+</html>

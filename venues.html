@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Browse Sports Venues | PlayMate – Find Your Game Partner</title>
+  <meta name="description" content="Browse all sports venues — turf, cricket, basketball, badminton and more. Find open slots near you and join instantly.">
+  <meta name="keywords" content="sports venues near me, turf booking, cricket ground, basketball court, badminton club, sports slot, pickup game, play sports India">
+  <link rel="stylesheet" href="styles/main.css">
+  <style>
+    .venues-page{padding-top:100px;padding-bottom:80px}
+    .venues-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:24px}
+    .search-filter-bar{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:32px}
+    .search-input-wrap{flex:1;min-width:200px;position:relative}
+    .search-input-wrap span{position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none}
+    .search-input-wrap input{width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-md);padding:12px 16px 12px 44px;color:var(--text-primary);font-size:15px;transition:var(--transition-fast)}
+    .search-input-wrap input:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-glow)}
+    .venues-count{font-size:14px;color:var(--text-muted);margin-bottom:20px}
+    .sort-select{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-md);padding:12px 16px;color:var(--text-primary);font-size:14px;cursor:pointer;min-width:160px}
+    .sort-select option{background:var(--bg-secondary)}
+  </style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-orbs"><div class="bg-orb bg-orb-1" style="opacity:.08"></div></div>
+
+<nav class="navbar scrolled">
+  <div class="container navbar-inner">
+    <a href="index.html" class="nav-logo">
+      <img src="assets/logo.svg" alt="PlayMate" style="height:36px;width:auto;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <div style="display:none;align-items:center;gap:8px;"><div class="nav-logo-icon">PM</div><span class="nav-logo-text">Play<span>Mate</span></span></div>
+    </a>
+    <div class="nav-links">
+      <a href="index.html" class="nav-link">Home</a>
+      <a href="venues.html" class="nav-link active">Browse Venues</a>
+      <a href="add-venue.html" class="nav-link">Add Venue</a>
+      <a href="profile.html" class="nav-link">My Profile</a>
+    </div>
+    <div class="nav-actions" id="nav-actions"></div>
+  </div>
+</nav>
+
+<div class="page-wrapper">
+  <div class="venues-page">
+    <div class="container">
+      <div class="section-tag">🏟️ Venues</div>
+      <h1 class="section-title">Browse <span>Venues</span></h1>
+      <p class="section-desc" style="margin-bottom:32px;">Find your perfect sports venue. Join open slots and play with passionate strangers!</p>
+
+      <div class="search-filter-bar">
+        <div class="search-input-wrap"><span>🔍</span><input type="text" id="search-input" placeholder="Search venues, locations…" autocomplete="off"></div>
+        <select class="sort-select" id="sport-filter">
+          <option value="all">All Sports</option>
+          <option value="Football">⚽ Football</option>
+          <option value="Cricket">🏏 Cricket</option>
+          <option value="Basketball">🏀 Basketball</option>
+          <option value="Badminton">🏸 Badminton</option>
+          <option value="Tennis">🎾 Tennis</option>
+          <option value="Volleyball">🏐 Volleyball</option>
+          <option value="Table Tennis">🏓 Table Tennis</option>
+          <option value="Hockey">🏑 Hockey</option>
+          <option value="Kabaddi">🤼 Kabaddi</option>
+          <option value="Other">🏅 Other</option>
+        </select>
+      </div>
+
+      <div class="filter-chips" id="filter-chips" style="margin-bottom:24px;">
+        <div class="filter-chip active" data-filter="all" onclick="setChipFilter('all')">🌐 All Venues</div>
+        <div class="filter-chip" data-filter="open" onclick="setChipFilter('open')">🟢 Has Open Slots</div>
+        <div class="filter-chip" data-filter="free" onclick="setChipFilter('free')">🆓 Free Entry</div>
+      </div>
+
+      <div class="venues-count" id="venues-count"></div>
+      <div class="venues-grid" id="venues-grid"><div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted);">Loading venues…</div></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+<script src="js/api.js"></script>
+<script src="js/ui.js"></script>
+<script>
+  let allVenues = [];
+  let activeChipFilter = 'all';
+
+  function setChipFilter(filter) {
+    activeChipFilter = filter;
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.toggle('active', c.dataset.filter === filter));
+    renderVenues();
+  }
+
+  function renderVenues() {
+    const query = document.getElementById('search-input').value.trim().toLowerCase();
+    const sportFilter = document.getElementById('sport-filter').value;
+    let venues = allVenues;
+
+    if (sportFilter && sportFilter !== 'all') venues = venues.filter(v => v.sportType === sportFilter);
+    if (query) venues = venues.filter(v => v.name.toLowerCase().includes(query) || v.location.toLowerCase().includes(query));
+    if (activeChipFilter === 'open') venues = venues.filter(v => (v.openSlots || 0) > 0);
+    if (activeChipFilter === 'free') venues = venues.filter(v => !v.pricePerSlot || v.pricePerSlot === 0);
+
+    document.getElementById('venues-count').textContent = `Showing ${venues.length} venue${venues.length !== 1 ? 's' : ''}`;
+    const container = document.getElementById('venues-grid');
+    if (!venues.length) {
+      container.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="empty-state-icon">🏟️</div><div class="empty-state-title">No venues found</div><p class="empty-state-desc">Try a different search or sport type.</p><a href="add-venue.html" class="btn btn-primary">+ Add a Venue</a></div>`;
+      return;
+    }
+    container.innerHTML = venues.map(v => {
+      const photo = v.photos?.[0] || 'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=800&q=80';
+      return `
+        <div class="venue-card" onclick="window.location.href='venue-detail.html?id=${v.id}'">
+          <div class="venue-card-image">
+            <img src="${photo}" alt="${v.name}" loading="lazy">
+            <div class="venue-card-image-overlay"></div>
+            <div style="position:absolute;top:12px;left:12px;">${(v.openSlots||0) > 0
+              ? `<span class="badge badge-open">🟢 ${v.openSlots} Open</span>`
+              : `<span class="badge" style="background:rgba(255,255,255,.1);color:var(--text-muted);border:1px solid var(--border);">No Open Slots</span>`}</div>
+          </div>
+          <div class="venue-card-body">
+            <div class="venue-card-sport"><span class="badge badge-sport">${UI.sportEmoji(v.sportType)} ${v.sportType}</span></div>
+            <h3 class="venue-card-title">${v.name}</h3>
+            <div class="venue-card-location">📍 ${v.location}</div>
+            ${v.amenities?.length ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px;">${v.amenities.slice(0,3).map(a=>`<span style="font-size:11px;padding:3px 8px;background:var(--bg-card);border:1px solid var(--border);border-radius:100px;color:var(--text-muted);">${a}</span>`).join('')}${v.amenities.length>3?`<span style="font-size:11px;color:var(--text-muted);">+${v.amenities.length-3}</span>`:''}</div>` : ''}
+            <div class="venue-card-footer">
+              <div class="venue-card-slots"><strong>${v.openSlots||0}</strong> open • <strong>${v.totalSlots||0}</strong> total</div>
+              <div style="font-size:18px;font-weight:800;color:var(--primary);">${UI.formatPrice(v.pricePerSlot)}<span style="font-size:11px;color:var(--text-muted);font-weight:400;">/slot</span></div>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  async function loadVenues() {
+    try {
+      allVenues = await API.getVenues();
+      renderVenues();
+    } catch(e) {
+      document.getElementById('venues-grid').innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="empty-state-icon">⚠️</div><div class="empty-state-title">Cannot connect to server</div><p class="empty-state-desc">Make sure the Flask backend is running on port 5000.</p></div>`;
+    }
+  }
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlSport = urlParams.get('sport');
+  const urlQuery = urlParams.get('q');
+  if (urlSport) document.getElementById('sport-filter').value = urlSport;
+  if (urlQuery)  document.getElementById('search-input').value = urlQuery;
+
+  document.getElementById('search-input').addEventListener('input', renderVenues);
+  document.getElementById('sport-filter').addEventListener('change', renderVenues);
+
+  loadVenues();
+</script>
+</body>
+</html>

@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add Your Venue | PlayMate</title>
+  <meta name="description" content="List your sports venue on PlayMate. Add your turf, cricket ground, basketball court or any sports facility and let players find you.">
+  <link rel="stylesheet" href="styles/main.css">
+  <style>
+    .add-venue-page{padding-top:100px;padding-bottom:80px}
+    .form-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-xl);padding:40px;margin-bottom:24px}
+    .form-card-title{font-size:18px;font-weight:800;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+    .amenity-input-wrap{display:flex;gap:10px}
+    .amenity-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+    .amenity-tag{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);border-radius:100px;font-size:13px;color:var(--primary)}
+    .amenity-tag button{background:none;border:none;color:var(--primary);cursor:pointer;font-size:16px;line-height:1;padding:0;display:flex;align-items:center}
+    .sport-select-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px}
+    .sport-select-item{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 10px;text-align:center;cursor:pointer;transition:var(--transition-fast)}
+    .sport-select-item:hover,.sport-select-item.selected{background:rgba(0,255,136,.08);border-color:var(--primary)}
+    .form-layout{display:grid;grid-template-columns:1fr 340px;gap:28px;align-items:start}
+    @media(max-width:900px){.form-layout{grid-template-columns:1fr}}
+    .preview-card{background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;position:sticky;top:100px}
+    .preview-body{padding:20px}
+  </style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-orbs"><div class="bg-orb bg-orb-2" style="opacity:.06"></div></div>
+
+<nav class="navbar scrolled">
+  <div class="container navbar-inner">
+    <a href="index.html" class="nav-logo">
+      <img src="assets/logo.svg" alt="PlayMate" style="height:36px;width:auto;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <div style="display:none;align-items:center;gap:8px;"><div class="nav-logo-icon">PM</div><span class="nav-logo-text">Play<span>Mate</span></span></div>
+    </a>
+    <div class="nav-links">
+      <a href="index.html" class="nav-link">Home</a>
+      <a href="venues.html" class="nav-link">Browse Venues</a>
+      <a href="add-venue.html" class="nav-link active">Add Venue</a>
+      <a href="profile.html" class="nav-link">My Profile</a>
+    </div>
+    <div class="nav-actions" id="nav-actions"></div>
+  </div>
+</nav>
+
+<div class="page-wrapper">
+  <div class="add-venue-page">
+    <div class="container">
+      <div class="section-tag">🏟️ Add Venue</div>
+      <h1 class="section-title" style="margin-bottom:8px;">List Your <span>Venue</span></h1>
+      <p class="section-desc" style="margin-bottom:40px;">Add your sports facility and start welcoming players from the PlayMate community!</p>
+
+      <div class="form-layout">
+        <div>
+          <form id="add-venue-form" onsubmit="submitVenue(event)">
+            <!-- SPORT TYPE -->
+            <div class="form-card">
+              <div class="form-card-title">🎮 Select Sport Type *</div>
+              <div class="sport-select-grid" id="sport-select-grid"></div>
+              <input type="hidden" id="selected-sport" required>
+            </div>
+
+            <!-- BASIC INFO -->
+            <div class="form-card">
+              <div class="form-card-title">📋 Venue Information</div>
+              <div class="form-group"><label class="form-label">Venue Name *</label><input type="text" class="form-input" id="venue-name" placeholder="e.g. GoalPost Turf Arena" required maxlength="80"></div>
+              <div class="form-group"><label class="form-label">Location / Address *</label><input type="text" class="form-input" id="venue-location" placeholder="e.g. Koramangala, Bangalore" required></div>
+              <div class="form-group"><label class="form-label">Description *</label><textarea class="form-textarea" id="venue-desc" placeholder="Describe your venue — facilities, rules, surface type, etc." required rows="4"></textarea></div>
+              <div class="form-group"><label class="form-label">Price per Slot (₹)</label><input type="number" class="form-input" id="venue-price" placeholder="0 for free" min="0"></div>
+            </div>
+
+            <!-- AMENITIES -->
+            <div class="form-card">
+              <div class="form-card-title">✨ Amenities</div>
+              <div class="amenity-input-wrap">
+                <input type="text" class="form-input" id="amenity-input" placeholder="e.g. Parking, Floodlights..." onkeypress="if(event.key==='Enter'){event.preventDefault();addAmenity();}">
+                <button type="button" class="btn btn-secondary" onclick="addAmenity()">+ Add</button>
+              </div>
+              <div class="amenity-list" id="amenity-list"></div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;">
+                ${['Parking','Floodlights','Changing Rooms','Water Cooler','Canteen','First Aid','Equipment Rental','Shower','Seating','WiFi'].map(a=>`<span style="cursor:pointer;font-size:12px;padding:5px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:100px;color:var(--text-muted);transition:all .2s;" onmouseover="this.style.borderColor='var(--primary)';this.style.color='var(--primary)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'" onclick="addAmenityText('${a}')">${a}</span>`).join('')}
+              </div>
+            </div>
+
+            <!-- PHOTOS -->
+            <div class="form-card">
+              <div class="form-card-title">📷 Venue Photos</div>
+              <div class="photo-upload-area">
+                <input type="file" id="venue-photos" accept="image/*" multiple onchange="handleVenuePhotos(this)">
+                <div class="upload-icon">📸</div>
+                <div class="upload-text"><strong>Click to upload</strong> or drag & drop</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">JPG, PNG, WebP — Max 5 photos</div>
+              </div>
+              <div class="image-preview-grid" id="venue-photo-previews"></div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg" style="width:100%;margin-top:8px;" id="submit-btn">🚀 Publish Venue</button>
+          </form>
+        </div>
+
+        <!-- PREVIEW -->
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px;">👀 Live Preview</div>
+          <div class="preview-card">
+            <div id="preview-photo" style="background:var(--bg-card);height:180px;display:flex;align-items:center;justify-content:center;font-size:48px;color:var(--text-muted);"><span>🏟️</span></div>
+            <div class="preview-body">
+              <span class="badge badge-sport" id="preview-sport-badge">🏅 Sport</span>
+              <div style="font-size:18px;font-weight:800;margin:10px 0 6px;color:var(--text-muted);" id="preview-name">Your Venue Name</div>
+              <div style="font-size:13px;color:var(--text-muted);" id="preview-location">📍 Location</div>
+              <div style="margin-top:12px;font-size:13px;color:var(--text-muted);line-height:1.6;" id="preview-desc">Description will appear here…</div>
+              <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:13px;color:var(--text-muted);">0 open slots</span>
+                <span style="font-weight:800;color:var(--primary);" id="preview-price">Free</span>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:20px;padding:20px;background:rgba(0,255,136,.04);border:1px solid rgba(0,255,136,.1);border-radius:var(--radius-md);">
+            <div style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:10px;">💡 Tips</div>
+            <ul style="font-size:13px;color:var(--text-muted);line-height:1.8;padding-left:16px;list-style:disc;">
+              <li>Add clear, well-lit photos</li>
+              <li>Mention surface type (grass, turf, hardwood)</li>
+              <li>List all amenities to attract more players</li>
+              <li>Add slots immediately after creating your venue</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+<script src="js/api.js"></script>
+<script src="js/ui.js"></script>
+<script>
+  const SPORTS = [
+    {name:'Football',emoji:'⚽'},{name:'Cricket',emoji:'🏏'},{name:'Basketball',emoji:'🏀'},
+    {name:'Badminton',emoji:'🏸'},{name:'Tennis',emoji:'🎾'},{name:'Volleyball',emoji:'🏐'},
+    {name:'Table Tennis',emoji:'🏓'},{name:'Hockey',emoji:'🏑'},{name:'Kabaddi',emoji:'🤼'},
+    {name:'Rugby',emoji:'🏩'},{name:'Boxing',emoji:'🥊'},{name:'Other',emoji:'🏅'},
+  ];
+
+  let amenities = [];
+  let venuePhotos = [];
+  let selectedSport = '';
+
+  document.addEventListener('DOMContentLoaded', () => {
+    if (!API.isLoggedIn()) { UI.toast('Please sign in to add a venue', 'error'); setTimeout(()=>window.location.href='login.html?redirect=add-venue.html',1500); return; }
+    renderSportGrid();
+    setupLivePreview();
+  });
+
+  function renderSportGrid() {
+    document.getElementById('sport-select-grid').innerHTML = SPORTS.map(s => `
+      <div class="sport-select-item" onclick="selectSport('${s.name}','${s.emoji}',this)">
+        <div style="font-size:26px;margin-bottom:4px;">${s.emoji}</div>
+        <div style="font-size:11px;font-weight:600;color:var(--text-secondary);">${s.name}</div>
+      </div>`).join('');
+  }
+
+  function selectSport(name, emoji, el) {
+    selectedSport = name;
+    document.getElementById('selected-sport').value = name;
+    document.querySelectorAll('.sport-select-item').forEach(i => i.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('preview-sport-badge').innerHTML = `${emoji} ${name}`;
+  }
+
+  function addAmenity() {
+    const input = document.getElementById('amenity-input');
+    const val = input.value.trim();
+    if (val) { addAmenityText(val); input.value = ''; }
+  }
+
+  function addAmenityText(val) {
+    if (amenities.includes(val)) return;
+    amenities.push(val);
+    renderAmenities();
+  }
+
+  function removeAmenity(a) { amenities = amenities.filter(x=>x!==a); renderAmenities(); }
+
+  function renderAmenities() {
+    document.getElementById('amenity-list').innerHTML = amenities.map(a =>
+      `<span class="amenity-tag">✓ ${a} <button type="button" onclick="removeAmenity('${a}')">×</button></span>`
+    ).join('');
+  }
+
+  async function handleVenuePhotos(input) {
+    venuePhotos = await UI.handleImageUpload(input, document.getElementById('venue-photo-previews'), 5);
+    if (venuePhotos.length > 0) {
+      const pd = document.getElementById('preview-photo');
+      pd.style.backgroundImage = `url(${venuePhotos[0]})`;
+      pd.style.backgroundSize = 'cover'; pd.style.backgroundPosition = 'center';
+      pd.innerHTML = '';
+    }
+  }
+
+  function setupLivePreview() {
+    document.getElementById('venue-name').addEventListener('input', e => { document.getElementById('preview-name').textContent = e.target.value || 'Your Venue Name'; });
+    document.getElementById('venue-location').addEventListener('input', e => { document.getElementById('preview-location').textContent = '📍 ' + (e.target.value || 'Location'); });
+    document.getElementById('venue-desc').addEventListener('input', e => { document.getElementById('preview-desc').textContent = e.target.value.slice(0,120) || 'Description will appear here…'; });
+    document.getElementById('venue-price').addEventListener('input', e => { const p=parseFloat(e.target.value)||0; document.getElementById('preview-price').textContent = p?`₹${p}`:'Free'; });
+  }
+
+  async function submitVenue(e) {
+    e.preventDefault();
+    if (!selectedSport) { UI.toast('Please select a sport type', 'error'); return; }
+    const btn = document.getElementById('submit-btn');
+    btn.textContent = '🚀 Publishing…'; btn.disabled = true;
+
+    const previewImgs = document.querySelectorAll('#venue-photo-previews .image-preview-item img');
+    const photos = Array.from(previewImgs).map(img => img.src);
+
+    try {
+      const venue = await API.createVenue({
+        name:          document.getElementById('venue-name').value.trim(),
+        sport_type:    selectedSport,
+        location:      document.getElementById('venue-location').value.trim(),
+        description:   document.getElementById('venue-desc').value.trim(),
+        photos,
+        amenities,
+        price_per_slot: parseFloat(document.getElementById('venue-price').value) || 0,
+      });
+      UI.toast('🎉 Venue published!', 'success');
+      setTimeout(() => window.location.href = `venue-detail.html?id=${venue.id}`, 1000);
+    } catch(err) {
+      UI.toast(err.message, 'error');
+      btn.textContent = '🚀 Publish Venue'; btn.disabled = false;
+    }
+  }
+</script>
+</body>
+</html>
