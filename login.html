@@ -72,15 +72,15 @@
       <div class="auth-panel active" id="panel-login">
         <h2 style="font-size:22px;font-weight:800;margin-bottom:6px;">Welcome back! 👋</h2>
         <p style="font-size:14px;color:var(--text-muted);margin-bottom:24px;">Sign in to join slots and play sports!</p>
-        <form id="login-form" onsubmit="handleLogin(event)">
+        <form id="login-form" onsubmit="handleLogin(event); return false;">
           <div class="form-group"><label class="form-label">Email Address</label><input type="email" class="form-input" id="login-email" placeholder="you@example.com" required></div>
           <div class="form-group"><label class="form-label">Password</label><input type="password" class="form-input" id="login-password" placeholder="Your password" required></div>
           <button type="submit" class="btn btn-primary" style="width:100%;margin-top:8px;" id="login-btn">Sign In →</button>
         </form>
-        <div class="auth-divider">Demo accounts</div>
+        <div class="auth-divider">Quick Demo Accounts</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          <button class="btn btn-ghost btn-sm" onclick="demoLogin('arjun@demo.com')">⚽ Arjun (Player)</button>
-          <button class="btn btn-ghost btn-sm" onclick="demoLogin('priya@demo.com')">🏸 Priya (Owner)</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="demoLogin('arjun@demo.com')">⚽ Arjun (Player)</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="demoLogin('priya@demo.com')">🏸 Priya (Owner)</button>
         </div>
         <p style="text-align:center;margin-top:20px;font-size:13px;color:var(--text-muted);">No account? <span style="color:var(--primary);cursor:pointer;font-weight:600;" onclick="switchTab('register')">Create one free →</span></p>
       </div>
@@ -89,7 +89,7 @@
       <div class="auth-panel" id="panel-register">
         <h2 style="font-size:22px;font-weight:800;margin-bottom:6px;">Join PlayMate 🚀</h2>
         <p style="font-size:14px;color:var(--text-muted);margin-bottom:24px;">Free forever. Find sports partners instantly.</p>
-        <form id="register-form" onsubmit="handleRegister(event)">
+        <form id="register-form" onsubmit="handleRegister(event); return false;">
           <div class="profile-photo-upload">
             <div class="profile-photo-preview" id="reg-photo-preview">👤</div>
             <div><div style="font-size:14px;font-weight:600;margin-bottom:4px;">Profile Photo</div><label style="color:var(--primary);cursor:pointer;font-size:13px;font-weight:600;text-decoration:underline;" for="reg-photo-input">Upload photo</label><input type="file" id="reg-photo-input" accept="image/*" style="display:none;" onchange="handleRegPhoto(this)"><div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Helps teammates recognise you</div></div>
@@ -107,6 +107,7 @@
 </div>
 
 <div id="toast-container" class="toast-container"></div>
+<script src="js/data.js"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js"></script>
 <script>
@@ -128,58 +129,72 @@
   }
 
   async function handleLogin(e) {
-    e.preventDefault();
+    if (e) e.preventDefault();
     const btn = document.getElementById('login-btn');
     btn.textContent = 'Signing in…'; btn.disabled = true;
+
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
+
     try {
-      await API.login(
-        document.getElementById('login-email').value.trim(),
-        document.getElementById('login-password').value
-      );
-      UI.toast('Welcome back! 🎉', 'success');
-      const redirect = new URLSearchParams(window.location.search).get('redirect');
-      setTimeout(() => window.location.href = redirect || 'index.html', 800);
+      const user = await API.login(email, password);
+      UI.toast(`Welcome back, ${user.name}! 🎉`, 'success');
+      if (typeof UI !== 'undefined' && UI.updateNavbar) UI.updateNavbar();
+      
+      const redirect = new URLSearchParams(window.location.search).get('redirect') || 'index.html';
+      setTimeout(() => {
+        window.location.href = redirect;
+      }, 500);
     } catch(err) {
-      UI.toast(err.message, 'error');
+      UI.toast(err.message || 'Login failed. Please check your credentials.', 'error');
       btn.textContent = 'Sign In →'; btn.disabled = false;
     }
   }
 
   async function handleRegister(e) {
-    e.preventDefault();
+    if (e) e.preventDefault();
     const phone = document.getElementById('reg-phone').value.trim();
-    if (phone.length !== 10 || !/^\d+$/.test(phone)) { UI.toast('Please enter a valid 10-digit phone number', 'error'); return; }
+    if (phone.length !== 10 || !/^\d+$/.test(phone)) {
+      UI.toast('Please enter a valid 10-digit phone number', 'error');
+      return;
+    }
     const btn = document.getElementById('reg-btn');
     btn.textContent = 'Creating account…'; btn.disabled = true;
+
+    const name = document.getElementById('reg-name').value.trim();
+    const email = document.getElementById('reg-email').value.trim();
+    const password = document.getElementById('reg-password').value;
+
     try {
-      await API.register(
-        document.getElementById('reg-name').value.trim(),
-        document.getElementById('reg-email').value.trim(),
-        phone,
-        document.getElementById('reg-password').value,
-        regPhotoBase64
-      );
-      UI.toast('🎉 Welcome to PlayMate!', 'success');
-      const redirect = new URLSearchParams(window.location.search).get('redirect');
-      setTimeout(() => window.location.href = redirect || 'index.html', 1000);
+      const user = await API.register(name, email, phone, password, regPhotoBase64);
+      UI.toast(`🎉 Welcome to PlayMate, ${user.name}!`, 'success');
+      if (typeof UI !== 'undefined' && UI.updateNavbar) UI.updateNavbar();
+
+      const redirect = new URLSearchParams(window.location.search).get('redirect') || 'index.html';
+      setTimeout(() => {
+        window.location.href = redirect;
+      }, 600);
     } catch(err) {
-      UI.toast(err.message, 'error');
+      UI.toast(err.message || 'Registration failed', 'error');
       btn.textContent = 'Create Account 🎉'; btn.disabled = false;
     }
   }
 
-  function demoLogin(email) {
+  async function demoLogin(email) {
     document.getElementById('login-email').value = email;
     document.getElementById('login-password').value = 'demo123';
-    UI.toast('Demo credentials filled — click Sign In!', 'info');
     switchTab('login');
+    // Automatically perform login when demo button is clicked
+    handleLogin();
   }
 
-  // Already logged in
-  if (API.isLoggedIn()) {
-    const redirect = new URLSearchParams(window.location.search).get('redirect');
-    window.location.href = redirect || 'index.html';
-  }
+  // Already logged in check on page load
+  document.addEventListener('DOMContentLoaded', () => {
+    if (API.isLoggedIn()) {
+      const redirect = new URLSearchParams(window.location.search).get('redirect') || 'index.html';
+      window.location.href = redirect;
+    }
+  });
 </script>
 </body>
 </html>

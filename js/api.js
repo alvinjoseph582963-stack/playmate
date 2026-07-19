@@ -1,162 +1,543 @@
 /* =====================================================
-   PlayMate – Frontend API Client
-   Replaces data.js — all calls go to Flask backend
+   PlayMate – Hybrid API & Data Layer Client
+   Supports both Flask Backend API and LocalStorage Fallback
    ===================================================== */
 
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE  = 'http://localhost:5000/api';
 const TOKEN_KEY = 'pm_token';
 const USER_KEY  = 'pm_user';
 
 const API = {
 
-  // ─── TOKEN MANAGEMENT ──────────────────────────────
-  getToken()          { return localStorage.getItem(TOKEN_KEY); },
-  setToken(t)         { localStorage.setItem(TOKEN_KEY, t); },
-  clearToken()        { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(USER_KEY); },
-  getCachedUser()     { try { return JSON.parse(localStorage.getItem(USER_KEY)); } catch { return null; } },
-  setCachedUser(u)    { localStorage.setItem(USER_KEY, JSON.stringify(u)); },
+  // ─── TOKEN & USER CACHE MANAGEMENT ─────────────────
+  getToken() {
+    return localStorage.getItem(TOKEN_KEY);
+  },
 
-  // ─── HTTP HELPER ───────────────────────────────────
+  setToken(token) {
+    if (token) localStorage.setItem(TOKEN_KEY, token);
+    else localStorage.removeItem(TOKEN_KEY);
+  },
+
+  getCachedUser() {
+    // Check pm_user or fallback to DB.getCurrentUser()
+    try {
+      const u = localStorage.getItem(USER_KEY);
+      if (u) return JSON.parse(u);
+    } catch {}
+    if (typeof DB !== 'undefined' && DB.getCurrentUser) {
+      return DB.getCurrentUser();
+    }
+    return null;
+  },
+
+  setCachedUser(user) {
+    if (user) {
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
+      if (typeof DB !== 'undefined' && DB.setCurrentUser) {
+        DB.setCurrentUser(user.id);
+      } else {
+        localStorage.setItem('pm_current_user', user.id);
+      }
+    } else {
+      localStorage.removeItem(USER_KEY);
+      localStorage.removeItem('pm_current_user');
+      if (typeof DB !== 'undefined' && DB.logout) {
+        DB.logout();
+      }
+    }
+  },
+
+  clearToken() {
+    localStorage.removeItem(TOKEN_KEY);
+    this.setCachedUser(null);
+  },
+
+  isLoggedIn() {
+    return !!(this.getToken() || this.getCachedUser());
+  },
+
+  // ─── HTTP REQUEST WITH FALLBACK ─────────────────────
   async _req(method, path, body = null, auth = false) {
     const headers = { 'Content-Type': 'application/json' };
-    if (auth || this.getToken()) {
-      const t = this.getToken();
-      if (t) headers['Authorization'] = `Bearer ${t}`;
+    const token = this.getToken();
+    if (auth || token) {
+      if (token) headers['Authorization'] = `Bearer ${token}`;
     }
+
     const opts = { method, headers };
     if (body !== null) opts.body = JSON.stringify(body);
 
-    const res = await fetch(`${API_BASE}${path}`, opts);
-    const data = await res.json().catch(() => ({}));
+    try {
+      const res = await fetch(`${API_BASE}${path}`, opts);
+      const data = await res.json().catch(() => ({}));
 
-    if (!res.ok) {
-      throw new Error(data.error || `Request failed (${res.status})`);
+      if (!res.ok) {
+        throw new Error(data.error || `Request failed with status ${res.status}`);
+      }
+      return data;
+    } catch (err) {
+      // If error is network/offline error, rethrow or allow caller fallback
+      if (err.message.includes('fetch') || err.message.includes('NetworkError') || err.name === 'TypeError') {
+        throw new Error('SERVER_OFFLINE');
+      }
+      throw err;
     }
-    return data;
   },
 
-  get(path, auth = false)          { return this._req('GET',    path, null, auth); },
-  post(path, body, auth = false)   { return this._req('POST',   path, body, auth); },
-  put(path, body, auth = false)    { return this._req('PUT',    path, body, auth); },
-  del(path, auth = false)          { return this._req('DELETE', path, null, auth); },
-
-  // ─── AUTH ──────────────────────────────────────────
-  async register(name, email, phone, password, profilePhoto = null) {
-    const data = await this.post('/auth/register', { name, email, phone, password, profile_photo: profilePhoto });
-    this.setToken(data.token);
-    this.setCachedUser(data.user);
-    return data.user;
-  },
-
+  // ─── AUTHENTICATION ────────────────────────────────
   async login(email, password) {
-    const data = await this.post('/auth/login', { email, password });
-    this.setToken(data.token);
-    this.setCachedUser(data.user);
-    return data.user;
+    const cleanEmail = email.trim().toLowerCase();
+    
+    // Try Flask API first
+    try {
+      const data = await this._req('POST', '/auth/login', { email: cleanEmail, password });
+      if (data && data.user) {
+        this.setToken(data.token || 'demo_jwt_token_' + Date.now());
+        // Standardize properties
+        const u = {
+          id: data.user.id,
+          name: data.user.name,
+          email: data.user.email,
+          phone: data.user.phone,
+          profilePhoto: data.user.profile_photo || data.user.profilePhoto || null,
+        };
+        this.setCachedUser(u);
+        return u;
+      }
+    } catch (err) {
+      if (err.message !== 'SERVER_OFFLINE') {
+        throw err; // Backend returned 401 invalid password, pass it up
+      }
+    }
+
+    // Offline / Standalone LocalStorage Fallback
+    if (typeof DB !== 'undefined') {
+      const user = DB.loginUser(cleanEmail, password);
+      this.setToken('local_session_' + user.id);
+      this.setCachedUser(user);
+      return user;
+    }
+
+    throw new Error('Could not connect to server or local database');
+  },
+
+  async register(name, email, phone, password, profilePhoto = null) {
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Try Flask API
+    try {
+      const data = await this._req('POST', '/auth/register', {
+        name, email: cleanEmail, phone, password, profile_photo: profilePhoto
+      });
+      if (data && data.user) {
+        this.setToken(data.token || 'demo_jwt_token_' + Date.now());
+        const u = {
+          id: data.user.id,
+          name: data.user.name,
+          email: data.user.email,
+          phone: data.user.phone,
+          profilePhoto: data.user.profile_photo || data.user.profilePhoto || null,
+        };
+        this.setCachedUser(u);
+        return u;
+      }
+    } catch (err) {
+      if (err.message !== 'SERVER_OFFLINE') {
+        throw err;
+      }
+    }
+
+    // Offline Fallback
+    if (typeof DB !== 'undefined') {
+      const user = DB.createUser({
+        name, email: cleanEmail, phone, password, profilePhoto
+      });
+      DB.setCurrentUser(user.id);
+      this.setToken('local_session_' + user.id);
+      this.setCachedUser(user);
+      return user;
+    }
+
+    throw new Error('Registration failed');
   },
 
   async getMe() {
-    if (!this.getToken()) return null;
+    const cached = this.getCachedUser();
+    if (!cached) return null;
+
     try {
-      const data = await this.get('/auth/me', true);
-      this.setCachedUser(data.user);
-      return data.user;
-    } catch {
-      return null;
+      const data = await this._req('GET', '/auth/me', null, true);
+      if (data && data.user) {
+        const u = {
+          id: data.user.id,
+          name: data.user.name,
+          email: data.user.email,
+          phone: data.user.phone,
+          profilePhoto: data.user.profile_photo || data.user.profilePhoto || cached.profilePhoto || null,
+        };
+        this.setCachedUser(u);
+        return u;
+      }
+    } catch (err) {
+      // Return cached user if offline
     }
+
+    return cached;
   },
 
   logout() {
     this.clearToken();
   },
 
-  isLoggedIn() {
-    return !!this.getToken();
-  },
-
-  // ─── USERS ─────────────────────────────────────────
+  // ─── USER PROFILE & DATA ────────────────────────────
   async updateProfile(updates) {
-    const data = await this.put('/users/me', updates, true);
-    this.setCachedUser(data.user);
-    return data.user;
+    const cached = this.getCachedUser();
+    if (!cached) throw new Error('Not logged in');
+
+    try {
+      const data = await this._req('PUT', '/users/me', updates, true);
+      if (data && data.user) {
+        const updated = {
+          ...cached,
+          name: data.user.name || cached.name,
+          phone: data.user.phone || cached.phone,
+          profilePhoto: data.user.profile_photo || data.user.profilePhoto || updates.profile_photo || cached.profilePhoto,
+        };
+        this.setCachedUser(updated);
+        return updated;
+      }
+    } catch (err) {
+      if (err.message !== 'SERVER_OFFLINE') throw err;
+    }
+
+    // Fallback
+    if (typeof DB !== 'undefined') {
+      const updated = DB.updateUser(cached.id, {
+        name: updates.name || cached.name,
+        phone: updates.phone || cached.phone,
+        profilePhoto: updates.profile_photo || updates.profilePhoto || cached.profilePhoto
+      });
+      this.setCachedUser(updated);
+      return updated;
+    }
+
+    return cached;
   },
 
   async getMySlots() {
-    const data = await this.get('/users/me/slots', true);
-    return data.slots;
+    const cached = this.getCachedUser();
+    if (!cached) return [];
+
+    try {
+      const data = await this._req('GET', '/users/me/slots', null, true);
+      if (data && data.slots) return data.slots;
+    } catch (err) {
+      if (err.message !== 'SERVER_OFFLINE') throw err;
+    }
+
+    if (typeof DB !== 'undefined') {
+      const slots = DB.getUserSlots(cached.id);
+      return slots.map(s => {
+        const v = DB.getVenueById(s.venueId);
+        return {
+          ...s,
+          venueId: s.venueId,
+          venueName: v ? v.name : 'Venue',
+          venueLocation: v ? v.location : '',
+          sportType: v ? v.sportType : 'Other',
+          memberCount: s.members ? s.members.length : 0,
+        };
+      });
+    }
+
+    return [];
   },
 
   async getMyVenues() {
-    const data = await this.get('/users/me/venues', true);
-    return data.venues;
+    const cached = this.getCachedUser();
+    if (!cached) return [];
+
+    try {
+      const data = await this._req('GET', '/users/me/venues', null, true);
+      if (data && data.venues) return data.venues;
+    } catch (err) {
+      if (err.message !== 'SERVER_OFFLINE') throw err;
+    }
+
+    if (typeof DB !== 'undefined') {
+      const venues = DB.getVenuesByOwner(cached.id);
+      return venues.map(v => {
+        const slots = DB.getSlotsByVenue(v.id);
+        const open = slots.filter(s => s.status === 'open');
+        return {
+          ...v,
+          openSlots: open.length,
+          totalSlots: slots.length,
+        };
+      });
+    }
+
+    return [];
   },
 
-  // ─── VENUES ────────────────────────────────────────
+  // ─── VENUES ─────────────────────────────────────────
   async getVenues(q = '', sport = 'all') {
-    const params = new URLSearchParams();
-    if (q)              params.set('q', q);
-    if (sport !== 'all') params.set('sport', sport);
-    const qs = params.toString() ? `?${params}` : '';
-    const data = await this.get(`/venues${qs}`);
-    return data.venues;
+    try {
+      const params = new URLSearchParams();
+      if (q) params.set('q', q);
+      if (sport !== 'all') params.set('sport', sport);
+      const qs = params.toString() ? `?${params}` : '';
+      const data = await this._req('GET', `/venues${qs}`);
+      if (data && data.venues) return data.venues;
+    } catch (err) {
+      if (err.message !== 'SERVER_OFFLINE') throw err;
+    }
+
+    if (typeof DB !== 'undefined') {
+      const venues = DB.searchVenues(q, sport);
+      return venues.map(v => {
+        const slots = DB.getSlotsByVenue(v.id);
+        const open = slots.filter(s => s.status === 'open');
+        return {
+          ...v,
+          openSlots: open.length,
+          totalSlots: slots.length,
+        };
+      });
+    }
+
+    return [];
   },
 
   async getVenue(id) {
-    const data = await this.get(`/venues/${id}`);
-    return data.venue;
+    try {
+      const data = await this._req('GET', `/venues/${id}`);
+      if (data && data.venue) return data.venue;
+    } catch (err) {
+      if (err.message !== 'SERVER_OFFLINE') throw err;
+    }
+
+    if (typeof DB !== 'undefined') {
+      const v = DB.getVenueById(id);
+      if (!v) throw new Error('Venue not found');
+      const owner = DB.getUserById(v.ownerId);
+      return {
+        ...v,
+        owner: owner ? { id: owner.id, name: owner.name, email: owner.email } : null,
+        ownerPhone: owner ? owner.phone : null,
+        ownerEmail: owner ? owner.email : null,
+      };
+    }
+
+    throw new Error('Venue not found');
   },
 
   async createVenue(venueData) {
-    const data = await this.post('/venues', venueData, true);
-    return data.venue;
+    const cached = this.getCachedUser();
+    if (!cached) throw new Error('Must be logged in');
+
+    try {
+      const data = await this._req('POST', '/venues', venueData, true);
+      if (data && data.venue) return data.venue;
+    } catch (err) {
+      if (err.message !== 'SERVER_OFFLINE') throw err;
+    }
+
+    if (typeof DB !== 'undefined') {
+      return DB.createVenue({
+        ownerId: cached.id,
+        name: venueData.name,
+        sportType: venueData.sport_type || venueData.sportType,
+        location: venueData.location,
+        description: venueData.description,
+        photos: venueData.photos || [],
+        amenities: venueData.amenities || [],
+        pricePerSlot: venueData.price_per_slot || venueData.pricePerSlot || 0,
+      });
+    }
+
+    throw new Error('Could not create venue');
   },
 
   async deleteVenue(id) {
-    return this.del(`/venues/${id}`, true);
+    try {
+      await this._req('DELETE', `/venues/${id}`, null, true);
+      return true;
+    } catch (err) {
+      if (err.message !== 'SERVER_OFFLINE') throw err;
+    }
+
+    if (typeof DB !== 'undefined') {
+      DB.deleteVenue(id);
+      return true;
+    }
+
+    return false;
   },
 
-  // ─── SLOTS ─────────────────────────────────────────
+  // ─── SLOTS ──────────────────────────────────────────
   async getSlots(venueId) {
-    const data = await this.get(`/venues/${venueId}/slots`);
-    return data.slots;
+    const cached = this.getCachedUser();
+    const uid = cached ? cached.id : null;
+
+    try {
+      const data = await this._req('GET', `/venues/${venueId}/slots`);
+      if (data && data.slots) return data.slots;
+    } catch (err) {
+      if (err.message !== 'SERVER_OFFLINE') throw err;
+    }
+
+    if (typeof DB !== 'undefined') {
+      DB.processPastSlots();
+      const slots = DB.getSlotsByVenue(venueId);
+      return slots.map(s => ({
+        ...s,
+        memberCount: s.members ? s.members.length : 0,
+        isJoined: uid && s.members ? s.members.includes(uid) : false,
+      }));
+    }
+
+    return [];
   },
 
   async createSlot(venueId, slotData) {
-    const data = await this.post(`/venues/${venueId}/slots`, slotData, true);
-    return data.slot;
+    try {
+      const data = await this._req('POST', `/venues/${venueId}/slots`, slotData, true);
+      if (data && data.slot) return data.slot;
+    } catch (err) {
+      if (err.message !== 'SERVER_OFFLINE') throw err;
+    }
+
+    if (typeof DB !== 'undefined') {
+      return DB.createSlot({
+        venueId,
+        date: slotData.date,
+        startTime: slotData.start_time || slotData.startTime,
+        endTime: slotData.end_time || slotData.endTime,
+        minMembers: slotData.min_members || slotData.minMembers,
+        maxMembers: slotData.max_members || slotData.maxMembers,
+        price: slotData.price || 0,
+      });
+    }
+
+    throw new Error('Could not create slot');
   },
 
   async deleteSlot(slotId) {
-    return this.del(`/slots/${slotId}`, true);
+    try {
+      await this._req('DELETE', `/slots/${slotId}`, null, true);
+      return true;
+    } catch (err) {
+      if (err.message !== 'SERVER_OFFLINE') throw err;
+    }
+
+    if (typeof DB !== 'undefined') {
+      DB.deleteSlot(slotId);
+      return true;
+    }
+
+    return false;
   },
 
   async joinSlot(slotId) {
-    const data = await this.post(`/slots/${slotId}/join`, {}, true);
-    return data.slot;
+    const cached = this.getCachedUser();
+    if (!cached) throw new Error('Must be logged in to join slots');
+
+    try {
+      const data = await this._req('POST', `/slots/${slotId}/join`, {}, true);
+      if (data && data.slot) return data.slot;
+    } catch (err) {
+      if (err.message !== 'SERVER_OFFLINE') throw err;
+    }
+
+    if (typeof DB !== 'undefined') {
+      const slot = DB.joinSlot(slotId, cached.id);
+      return {
+        ...slot,
+        memberCount: slot.members.length,
+        isJoined: true,
+      };
+    }
+
+    throw new Error('Could not join slot');
   },
 
   async leaveSlot(slotId) {
-    const data = await this.post(`/slots/${slotId}/leave`, {}, true);
-    return data.slot;
+    const cached = this.getCachedUser();
+    if (!cached) throw new Error('Must be logged in');
+
+    try {
+      const data = await this._req('POST', `/slots/${slotId}/leave`, {}, true);
+      if (data && data.slot) return data.slot;
+    } catch (err) {
+      if (err.message !== 'SERVER_OFFLINE') throw err;
+    }
+
+    if (typeof DB !== 'undefined') {
+      const slot = DB.leaveSlot(slotId, cached.id);
+      return {
+        ...slot,
+        memberCount: slot.members.length,
+        isJoined: false,
+      };
+    }
+
+    throw new Error('Could not leave slot');
   },
 
   async getSlotMembers(slotId) {
-    const data = await this.get(`/slots/${slotId}/members`, true);
-    return data.slot;
+    const cached = this.getCachedUser();
+
+    try {
+      const data = await this._req('GET', `/slots/${slotId}/members`, null, true);
+      if (data && data.slot) return data.slot;
+    } catch (err) {
+      if (err.message !== 'SERVER_OFFLINE') throw err;
+    }
+
+    if (typeof DB !== 'undefined') {
+      const slot = DB.getSlotById(slotId);
+      if (!slot) throw new Error('Slot not found');
+      const memberDetails = (slot.members || []).map(mid => {
+        const u = DB.getUserById(mid);
+        return u ? {
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          phone: u.phone,
+          profile_photo: u.profilePhoto || null,
+        } : null;
+      }).filter(Boolean);
+
+      return {
+        ...slot,
+        memberDetails,
+      };
+    }
+
+    return { memberDetails: [] };
   },
 
-  // ─── STATS ─────────────────────────────────────────
+  // ─── STATS ──────────────────────────────────────────
   async getStats() {
-    const data = await this.get('/stats');
-    return data;
-  },
-};
+    try {
+      const data = await this._req('GET', '/stats');
+      if (data) return data;
+    } catch (err) {}
 
-/* =====================================================
-   Backward-compat shim: expose DB-like helpers
-   so ui.js keeps working without changes
-===================================================== */
-const DB = {
-  getCurrentUser() { return API.getCachedUser(); },
-  logout()         { API.logout(); },
+    if (typeof DB !== 'undefined') {
+      const venues = DB.getVenues();
+      const slots = DB.getSlots();
+      const openSlots = slots.filter(s => s.status === 'open');
+      const users = DB.getUsers();
+      return {
+        venues: venues.length,
+        open_slots: openSlots.length,
+        players: users.length,
+      };
+    }
+
+    return { venues: 4, open_slots: 9, players: 4 };
+  },
 };
