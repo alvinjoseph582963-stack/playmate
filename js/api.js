@@ -540,4 +540,202 @@ const API = {
 
     return { venues: 4, open_slots: 9, players: 4 };
   },
+
+  // ─── ADMIN MANAGEMENT ──────────────────────────────
+  async getAdminOverview() {
+    try {
+      const data = await this._req('GET', '/admin/overview');
+      if (data) return data;
+    } catch(err) {
+      if (err.message !== 'SERVER_OFFLINE') throw err;
+    }
+
+    if (typeof DB !== 'undefined') {
+      const users  = DB.getUsers();
+      const venues = DB.getVenues();
+      const slots  = DB.getSlots();
+      let totalJoins = 0;
+      slots.forEach(s => totalJoins += (s.members ? s.members.length : 0));
+
+      return {
+        users: users.length,
+        venues: venues.length,
+        slots: slots.length,
+        bookings: totalJoins,
+        open_slots: slots.filter(s => s.status === 'open').length,
+        locked_slots: slots.filter(s => s.status === 'locked').length,
+        cancelled: slots.filter(s => s.status === 'cancelled').length,
+        completed: slots.filter(s => s.status === 'completed').length,
+      };
+    }
+    return { users: 0, venues: 0, slots: 0, bookings: 0, open_slots: 0, locked_slots: 0, cancelled: 0, completed: 0 };
+  },
+
+  async getAdminUsers() {
+    try {
+      const data = await this._req('GET', '/admin/users');
+      if (data && data.users) return data.users;
+    } catch(err) {
+      if (err.message !== 'SERVER_OFFLINE') throw err;
+    }
+
+    if (typeof DB !== 'undefined') {
+      const users  = DB.getUsers();
+      const venues = DB.getVenues();
+      const slots  = DB.getSlots();
+      return users.map(u => ({
+        ...u,
+        is_active: u.is_active !== false,
+        venue_count: venues.filter(v => v.ownerId === u.id).length,
+        slot_joins: slots.filter(s => s.members && s.members.includes(u.id)).length,
+      }));
+    }
+    return [];
+  },
+
+  async toggleUserStatus(userId) {
+    try {
+      const data = await this._req('PUT', `/admin/users/${userId}/toggle-status`);
+      if (data) return data;
+    } catch(err) {
+      if (err.message !== 'SERVER_OFFLINE') throw err;
+    }
+
+    if (typeof DB !== 'undefined') {
+      const users = DB.getUsers();
+      const idx = users.findIndex(u => u.id === userId);
+      if (idx !== -1) {
+        users[idx].is_active = !users[idx].is_active;
+        DB._set(DB.KEYS.USERS, users);
+        return { is_active: users[idx].is_active };
+      }
+    }
+    return { is_active: true };
+  },
+
+  async deleteUser(userId) {
+    try {
+      await this._req('DELETE', `/admin/users/${userId}`);
+      return true;
+    } catch(err) {
+      if (err.message !== 'SERVER_OFFLINE') throw err;
+    }
+
+    if (typeof DB !== 'undefined') {
+      const users = DB.getUsers().filter(u => u.id !== userId);
+      DB._set(DB.KEYS.USERS, users);
+      return true;
+    }
+    return false;
+  },
+
+  async getAdminVenues() {
+    try {
+      const data = await this._req('GET', '/admin/venues');
+      if (data && data.venues) return data.venues;
+    } catch(err) {
+      if (err.message !== 'SERVER_OFFLINE') throw err;
+    }
+
+    if (typeof DB !== 'undefined') {
+      const venues = DB.getVenues();
+      const users  = DB.getUsers();
+      const slots  = DB.getSlots();
+      return venues.map(v => {
+        const owner = users.find(u => u.id === v.ownerId);
+        const vSlots = slots.filter(s => s.venueId === v.id);
+        return {
+          ...v,
+          is_active: v.is_active !== false,
+          owner_name: owner ? owner.name : 'Unknown',
+          owner_email: owner ? owner.email : '',
+          totalSlots: vSlots.length,
+          openSlots: vSlots.filter(s => s.status === 'open').length,
+        };
+      });
+    }
+    return [];
+  },
+
+  async toggleVenueStatus(venueId) {
+    try {
+      const data = await this._req('PUT', `/admin/venues/${venueId}/toggle-status`);
+      if (data) return data;
+    } catch(err) {
+      if (err.message !== 'SERVER_OFFLINE') throw err;
+    }
+
+    if (typeof DB !== 'undefined') {
+      const venues = DB.getVenues();
+      const idx = venues.findIndex(v => v.id === venueId);
+      if (idx !== -1) {
+        venues[idx].is_active = !venues[idx].is_active;
+        DB._set(DB.KEYS.VENUES, venues);
+        return { is_active: venues[idx].is_active };
+      }
+    }
+    return { is_active: true };
+  },
+
+  async getAdminSlots() {
+    try {
+      const data = await this._req('GET', '/admin/slots');
+      if (data && data.slots) return data.slots;
+    } catch(err) {
+      if (err.message !== 'SERVER_OFFLINE') throw err;
+    }
+
+    if (typeof DB !== 'undefined') {
+      const slots  = DB.getSlots();
+      const venues = DB.getVenues();
+      const users  = DB.getUsers();
+      return slots.map(s => {
+        const v = venues.find(x => x.id === s.venueId);
+        const owner = v ? users.find(u => u.id === v.ownerId) : null;
+        const memberDetails = (s.members || []).map(mid => {
+          const u = users.find(x => x.id === mid);
+          return u ? { id: u.id, name: u.name, email: u.email, phone: u.phone, profile_photo: u.profilePhoto } : null;
+        }).filter(Boolean);
+
+        return {
+          ...s,
+          memberCount: s.members ? s.members.length : 0,
+          venueName: v ? v.name : 'Unknown Venue',
+          venueLocation: v ? v.location : '',
+          sportType: v ? v.sportType : 'Other',
+          ownerName: owner ? owner.name : 'Unknown',
+          memberDetails,
+        };
+      });
+    }
+    return [];
+  },
+
+  async updateSlotStatus(slotId, status) {
+    try {
+      const data = await this._req('PUT', `/admin/slots/${slotId}/status`, { status });
+      if (data) return data;
+    } catch(err) {
+      if (err.message !== 'SERVER_OFFLINE') throw err;
+    }
+
+    if (typeof DB !== 'undefined') {
+      const slot = DB.updateSlot(slotId, { status });
+      return { status: slot.status };
+    }
+    return { status };
+  },
+
+  async processExpiredSlots() {
+    try {
+      await this._req('POST', '/admin/process-slots');
+      return true;
+    } catch(err) {}
+
+    if (typeof DB !== 'undefined') {
+      DB.processPastSlots();
+      return true;
+    }
+    return false;
+  },
 };

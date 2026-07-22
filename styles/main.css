@@ -215,7 +215,7 @@ ul {
   text-decoration: none;
 }
 
-.nav-logo-icon {
+/* .nav-logo-icon {
   width: 40px;
   height: 40px;
   background: linear-gradient(135deg, var(--primary), var(--accent));
@@ -227,7 +227,7 @@ ul {
   font-weight: 900;
   color: var(--bg-primary);
   box-shadow: 0 0 20px var(--primary-glow);
-}
+} */
 
 .nav-logo-text {
   font-family: var(--font-main);
@@ -237,10 +237,6 @@ ul {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-}
-
-.nav-logo-text span {
-  -webkit-text-fill-color: var(--secondary);
 }
 
 .nav-links {

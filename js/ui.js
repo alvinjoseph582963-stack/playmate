@@ -142,10 +142,34 @@ const UI = {
     const user = API ? API.getCachedUser() : (DB ? DB.getCurrentUser() : null);
     const navActions = document.getElementById('nav-actions');
     if (!navActions) return;
+
+    const isAdmin = user && user.email && user.email.toLowerCase() === 'jovelrobin07@gmail.com';
+
+    // Handle nav-links admin link
+    const navLinks = document.querySelector('.nav-links');
+    if (navLinks) {
+      const existingLink = document.getElementById('admin-nav-link');
+      if (isAdmin) {
+        if (!existingLink) {
+          const adminLink = document.createElement('a');
+          adminLink.id = 'admin-nav-link';
+          adminLink.href = 'admin.html';
+          adminLink.className = 'nav-link';
+          adminLink.innerHTML = '👑 Admin';
+          navLinks.appendChild(adminLink);
+        }
+      } else {
+        if (existingLink) {
+          existingLink.remove();
+        }
+      }
+    }
+
     if (user) {
       const photo = user.profile_photo || user.profilePhoto;
       const name  = user.name || '?';
       navActions.innerHTML = `
+        ${isAdmin ? `<a href="admin.html" class="btn btn-ghost btn-sm" title="Admin Dashboard">👑 Admin</a>` : ''}
         <a href="add-venue.html" class="btn btn-secondary btn-sm">+ Add Venue</a>
         <a href="profile.html" class="nav-avatar" title="${name}">
           ${photo

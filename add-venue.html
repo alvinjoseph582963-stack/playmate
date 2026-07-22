@@ -30,8 +30,10 @@
 <nav class="navbar scrolled">
   <div class="container navbar-inner">
     <a href="index.html" class="nav-logo">
-      <img src="assets/logo.svg" alt="PlayMate" style="height:36px;width:auto;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-      <div style="display:none;align-items:center;gap:8px;"><div class="nav-logo-icon">PM</div><span class="nav-logo-text">Play<span>Mate</span></span></div>
+      <img src="assets/logo.svg" alt="PlayMate" style="height:40px;width:auto;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <div style="display:none;align-items:center;gap:8px;">
+        <!-- <div class="nav-logo-icon">PM</div> -->
+        <span class="nav-logo-text">Play<span>Mate</span></span></div>
     </a>
     <div class="nav-links">
       <a href="index.html" class="nav-link">Home</a>
@@ -78,7 +80,7 @@
               </div>
               <div class="amenity-list" id="amenity-list"></div>
               <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;">
-                ${['Parking','Floodlights','Changing Rooms','Water Cooler','Canteen','First Aid','Equipment Rental','Shower','Seating','WiFi'].map(a=>`<span style="cursor:pointer;font-size:12px;padding:5px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:100px;color:var(--text-muted);transition:all .2s;" onmouseover="this.style.borderColor='var(--primary)';this.style.color='var(--primary)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'" onclick="addAmenityText('${a}')">${a}</span>`).join('')}
+               <!-- pla ${['Parking','Floodlights','Changing Rooms','Water Cooler','Canteen','First Aid','Equipment Rental','Shower','Seating','WiFi'].map(a=>`<span style="cursor:pointer;font-size:12px;padding:5px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:100px;color:var(--text-muted);transition:all .2s;" onmouseover="this.style.borderColor='var(--primary)';this.style.color='var(--primary)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'" onclick="addAmenityText('${a}')">${a}</span>`).join('')} -->
               </div>
             </div>
 
